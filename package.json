@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-bing-image-creator",
   "description": "用于生成来自 Bing Image Creator (DALL·E)的图片。🖼️🎨",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -34,6 +34,8 @@
     "koishi": "^4.14.5"
   },
   "dependencies": {
-    "jsdom": "^22.1.0"
+    "fetch-undici": "^3.0.1",
+    "jsdom": "^22.1.0",
+    "undici": "^5.25.3"
   }
 }
