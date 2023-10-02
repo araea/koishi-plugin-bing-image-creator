@@ -1,11 +1,12 @@
 import { Context, Schema, Logger, h } from 'koishi'
 
-import { fetch as fetchUndici } from 'fetch-undici';
-import puppeteer from "puppeteer-core";
-import { ProxyAgent } from 'undici';
-import find from 'puppeteer-finder';
-import { JSDOM } from 'jsdom';
+import axios from 'axios';
 import crypto from 'crypto';
+import { JSDOM } from 'jsdom';
+import find from 'puppeteer-finder';
+import { ProxyAgent } from 'undici';
+import puppeteer from "puppeteer-core";
+import { fetch as fetchUndici } from 'fetch-undici';
 
 export const name = 'bing-image-creator'
 export const logger = new Logger('bingImageCreator')
@@ -96,13 +97,22 @@ export function apply(ctx: Context, config: Config) {
 
         for (let imageUrl of imageUrls) {
           if (imageUrl) {
-            await session.send(`${h.at(session.userId)}${h.image(imageUrl)}`);
+            const buffer = await downloadImage(imageUrl);
+
+            // Send image as buffer
+            await session.send(`${h.at(session.userId)}${h.image(buffer, 'image/png')}`);
           }
         }
       } catch (error) {
         console.debug(error);
       }
     });
+}
+
+async function downloadImage(url: string): Promise<Buffer> {
+  const { data } = await axios.get(url, { responseType: 'arraybuffer' });
+  const buffer = Buffer.from(data, 'binary');
+  return buffer;
 }
 
 
