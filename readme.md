@@ -1,6 +1,6 @@
 # koishi-plugin-bing-image-creator
 
-![npm version](https://img.shields.io/npm/v/koishi-plugin-bing-image-creator?style=flat-square)
+[![npm](https://img.shields.io/npm/v/koishi-plugin-bing-image-creator?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-bing-image-creator)
 
 `koishi-plugin-bing-image-creator` 是一个基于 Koishi 框架的 AI 绘图插件。它允许你生成来自 Bing Image Creator 的图片。🖼️🎨
 
