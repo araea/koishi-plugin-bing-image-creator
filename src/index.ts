@@ -85,7 +85,7 @@ export function apply(ctx: Context, config: Config) {
         const page = await browser.newPage();
         await page.goto(src);
 
-        await page.waitForSelector('img.mimg');
+        await page.waitForSelector('img.mimg', { timeout: 300000 });  // Extend timeout to 5 minutes
 
         const imageUrls = await page.evaluate(() => {
           const images = Array.from(document.querySelectorAll('img.mimg'));
