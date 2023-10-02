@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-bing-image-creator",
-  "description": "",
+  "description": "用于生成来自 Bing Image Creator (DALL·E)的图片。🖼️🎨",
   "version": "0.0.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -9,13 +9,32 @@
     "dist"
   ],
   "license": "MIT",
+  "author": "Nawyjx <3373167460@qq.com>",
+  "homepage": "https://www.npmjs.com/package/koishi-plugin-bing-image-creator?activeTab=readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/araea/koishi-plugin-bing-image-creator.git"
+  },
   "scripts": {},
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "bing",
+    "ai",
+    "image",
+    "image creator",
+    "bing image creator",
+    "DALLE",
+    "AI 绘画",
+    "BingAI",
+    "bingImageCreator"
   ],
   "peerDependencies": {
     "koishi": "^4.14.5"
+  },
+  "dependencies": {
+    "@timefox/bic-sydney": "^1.1.4",
+    "jsdom": "^22.1.0"
   }
 }
