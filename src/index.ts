@@ -1,4 +1,4 @@
-import { Context, Schema, Logger, h } from 'koishi'
+import { Context, Schema, Logger, h, Session } from 'koishi'
 
 import axios from 'axios';
 import crypto from 'crypto';
@@ -46,7 +46,7 @@ export const Config: Schema<Config> = Schema.object({
   cookies: Schema.string().default('').description('(可选) 如果上述不起作用，提供所有的 cookies 作为一个字符串'),
   host: Schema.string().default('').description('(可选) 必要的对于一些人在不同的国家，例如中国 (https://cn.bing.com)'),
   userAgent: Schema.string().default('').description('(可选) 网络请求的用户代理'),
-  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志'),
+  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `logger.debug()` 日志'),
 })
 
 const executablePath = find();
@@ -67,12 +67,12 @@ export function apply(ctx: Context, config: Config) {
 
       const messageId = crypto.randomUUID();
       await session.send('嗯~');
-      let browser;
 
+      let browser;
       try {
         const result = await new BingImageCreator(config).genImageIframeCsr(prompt, messageId);
         if (debug) {
-          console.debug(result);
+          logger.debug(result);
         }
 
         const src = new JSDOM(result).window.document.querySelector('iframe').getAttribute('srcdoc');
@@ -83,9 +83,9 @@ export function apply(ctx: Context, config: Config) {
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
           protocolTimeout: 300000, // Increase protocol timeout to 5 minutes
         });
+
         const page = await browser.newPage();
         await page.goto(src);
-
         await page.waitForSelector('img.mimg', { timeout: 300000 });  // Extend timeout to 5 minutes
 
         const imageUrls = await page.evaluate(() => {
@@ -93,17 +93,9 @@ export function apply(ctx: Context, config: Config) {
           return images.map(img => img.getAttribute('src'));
         });
 
-        for (let imageUrl of imageUrls) {
-          if (imageUrl) {
-            const cleanedUrl = cleanUrl(imageUrl); // clean the url before downloading
-            const buffer = await downloadImage(cleanedUrl);
-
-            // Send image as buffer
-            await session.send(`${h.at(session.userId)}${h.image(buffer, 'image/png')}`);
-          }
-        }
+        await sendImages(imageUrls, session);
       } catch (error) {
-        console.error('Error occurred while generating image:', error);
+        logger.error('Error occurred while generating image:', error);
       } finally {
         if (browser) {
           await browser.close();
@@ -112,8 +104,26 @@ export function apply(ctx: Context, config: Config) {
     });
 }
 
+async function sendImages(imageUrls: string[], session: Session): Promise<void> {
+  const promises = imageUrls.map(async (imageUrl) => {
+    try {
+      if (imageUrl) {
+        const cleanedUrl = cleanUrl(imageUrl); // clean the url before downloading
+        const buffer = await downloadImage(cleanedUrl);
+
+        // Send image as buffer
+        await session.send(`${h.at(session.userId)}${h.image(buffer, 'image/png')}`);
+      }
+    } catch (error) {
+      logger.error('Error occurred while downloading or sending image:', error);
+    }
+  });
+
+  await Promise.all(promises);
+}
+
 function cleanUrl(url: string): string {
-  let cleanedUrl = new URL(url);
+  const cleanedUrl = new URL(url);
   cleanedUrl.searchParams.delete('w');
   cleanedUrl.searchParams.delete('h');
   cleanedUrl.searchParams.delete('c');
@@ -370,16 +380,14 @@ class BingImageCreator {
     const url = `${this.apiurl}${telemetryData}&q=${encodeURIComponent(prompt)}${messageId ? `&iframeid=${messageId}` : ''}`;
 
     if (this.debug) {
-      console.debug(`The url of the request for image creation: ${url}`);
-      console.debug();
+      logger.debug(`The url of the request for image creation: ${url}`);
     }
 
     const response = await fetch(url, this.fetchOptions);
     const { status } = response;
     if (this.debug) {
-      console.debug('The response of the request for image creation:');
-      console.debug(response);
-      console.debug();
+      logger.debug('The response of the request for image creation:');
+      logger.debug(response);
     }
 
     if (status !== 200) {
@@ -417,7 +425,7 @@ class BingImageCreator {
 
     while (polling) {
       if (this.debug) {
-        console.debug(`polling the image request: ${pollingUrl}`);
+        logger.debug(`polling the image request: ${pollingUrl}`);
       }
 
       // eslint-disable-next-line no-await-in-loop
@@ -451,9 +459,8 @@ class BingImageCreator {
     const { pollingUrl } = await this.genImagePage(prompt, messageId);
     const resultHtml = await this.pollingImgRequest(pollingUrl, onProgress);
     if (this.debug) {
-      console.debug('The result of the request for image creation:');
-      console.debug(resultHtml);
-      console.debug();
+      logger.debug('The result of the request for image creation:');
+      logger.debug(resultHtml);
     }
 
     const regex = /(?<=src=")[^"]+(?=")/g;
