@@ -31,14 +31,13 @@ export const usage = `## 🎮 使用
 
 - \`bingImageCreator\`：基础命令，用于显示帮助信息。
 - \`bingImageCreator.draw <prompt:text>\`：生成 Bing 图片。需要提供一个 \`prompt\` 参数。`
-
 export interface Config {
-  proxy: string
-  userToken: string
-  cookies?: string
-  host?: string
-  userAgent?: string
-  debug?: boolean
+  proxy: string;
+  userToken: string;
+  cookies?: string;
+  host?: string;
+  userAgent?: string;
+  debug?: boolean;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -53,12 +52,13 @@ export const Config: Schema<Config> = Schema.object({
 const executablePath = find();
 
 export function apply(ctx: Context, config: Config) {
-  const options = config;
+  const { debug } = config;
 
   ctx.command('bingImageCreator', '查看bingImageCreator指令帮助')
     .action(async ({ session }) => {
-      await session.execute(`bingImageCreator -h`)
-    })
+      await session.execute(`bingImageCreator -h`);
+    });
+
   ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
     .action(async ({ session }, prompt) => {
       if (!prompt) {
@@ -67,20 +67,21 @@ export function apply(ctx: Context, config: Config) {
 
       const messageId = crypto.randomUUID();
       await session.send('嗯~');
+      let browser;
 
       try {
-        const result = await new BingImageCreator(options).genImageIframeCsr(prompt, messageId);
-        if (options.debug) {
+        const result = await new BingImageCreator(config).genImageIframeCsr(prompt, messageId);
+        if (debug) {
           console.debug(result);
         }
 
         const src = new JSDOM(result).window.document.querySelector('iframe').getAttribute('srcdoc');
 
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
           executablePath,
           headless: "new",
-          // headless: false,
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          protocolTimeout: 300000, // Increase protocol timeout to 5 minutes
         });
         const page = await browser.newPage();
         await page.goto(src);
@@ -92,8 +93,6 @@ export function apply(ctx: Context, config: Config) {
           return images.map(img => img.getAttribute('src'));
         });
 
-        await browser.close();
-
         for (let imageUrl of imageUrls) {
           if (imageUrl) {
             const cleanedUrl = cleanUrl(imageUrl); // clean the url before downloading
@@ -104,7 +103,11 @@ export function apply(ctx: Context, config: Config) {
           }
         }
       } catch (error) {
-        console.debug(error);
+        console.error('Error occurred while generating image:', error);
+      } finally {
+        if (browser) {
+          await browser.close();
+        }
       }
     });
 }
@@ -124,7 +127,6 @@ async function downloadImage(url: string): Promise<Buffer> {
   const buffer = Buffer.from(data, 'binary');
   return buffer;
 }
-
 
 type BicCreationResult = {
   contentUrl: string,
