@@ -50,7 +50,7 @@ export const Config: Schema<Config> = Schema.object({
   debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志'),
 })
 
-export const executablePath = find();
+const executablePath = find();
 
 export function apply(ctx: Context, config: Config) {
   const options = config;
@@ -59,7 +59,6 @@ export function apply(ctx: Context, config: Config) {
     .action(async ({ session }) => {
       await session.execute(`bingImageCreator -h`)
     })
-
   ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
     .action(async ({ session }, prompt) => {
       if (!prompt) {
@@ -97,7 +96,8 @@ export function apply(ctx: Context, config: Config) {
 
         for (let imageUrl of imageUrls) {
           if (imageUrl) {
-            const buffer = await downloadImage(imageUrl);
+            const cleanedUrl = cleanUrl(imageUrl); // clean the url before downloading
+            const buffer = await downloadImage(cleanedUrl);
 
             // Send image as buffer
             await session.send(`${h.at(session.userId)}${h.image(buffer, 'image/png')}`);
@@ -109,12 +109,21 @@ export function apply(ctx: Context, config: Config) {
     });
 }
 
+function cleanUrl(url: string): string {
+  let cleanedUrl = new URL(url);
+  cleanedUrl.searchParams.delete('w');
+  cleanedUrl.searchParams.delete('h');
+  cleanedUrl.searchParams.delete('c');
+  cleanedUrl.searchParams.delete('r');
+  cleanedUrl.searchParams.delete('o');
+  return cleanedUrl.toString();
+}
+
 async function downloadImage(url: string): Promise<Buffer> {
   const { data } = await axios.get(url, { responseType: 'arraybuffer' });
   const buffer = Buffer.from(data, 'binary');
   return buffer;
 }
-
 
 
 type BicCreationResult = {
