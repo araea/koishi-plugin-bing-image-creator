@@ -12,6 +12,7 @@ export const name = 'bing-image-creator'
 export const logger = new Logger('bingImageCreator')
 export const usage = `## 🎮 使用
 
+- 确保你能够正常使用 [Image Creator from Microsoft Bing](https://www.bing.com/create)。
 - 填写必选配置项。
 - 建议为指令添加指令别名。
 
@@ -46,7 +47,7 @@ export const Config: Schema<Config> = Schema.object({
   cookies: Schema.string().default('').description('(可选) 如果上述不起作用，提供所有的 cookies 作为一个字符串'),
   host: Schema.string().default('').description('(可选) 必要的对于一些人在不同的国家，例如中国 (https://cn.bing.com)'),
   userAgent: Schema.string().default('').description('(可选) 网络请求的用户代理'),
-  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `logger.debug()` 日志'),
+  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志'),
 })
 
 const executablePath = find();
@@ -72,30 +73,45 @@ export function apply(ctx: Context, config: Config) {
       try {
         const result = await new BingImageCreator(config).genImageIframeCsr(prompt, messageId);
         if (debug) {
-          logger.debug(result);
+          console.debug(result);
         }
 
         const src = new JSDOM(result).window.document.querySelector('iframe').getAttribute('srcdoc');
 
         browser = await puppeteer.launch({
           executablePath,
-          headless: "new",
+          headless: false,
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
-          protocolTimeout: 300000, // Increase protocol timeout to 5 minutes
+          protocolTimeout: 300000,
         });
 
         const page = await browser.newPage();
         await page.goto(src);
-        await page.waitForSelector('img.mimg', { timeout: 300000 });  // Extend timeout to 5 minutes
 
-        const imageUrls = await page.evaluate(() => {
-          const images = Array.from(document.querySelectorAll('img.mimg'));
-          return images.map(img => img.getAttribute('src'));
-        });
+        let imageUrls = [];
+        // Try to find the image every 5 seconds for up to 5 minutes
+        for (let attempt = 0; attempt < 60; attempt++) {
+          await page.reload(); // Refresh the page
+          await page.waitForTimeout(5000); // Wait for 5 seconds
+
+          imageUrls = await page.evaluate(() => {
+            const images = Array.from(document.querySelectorAll('img.mimg'));
+            return images.map(img => img.getAttribute('src'));
+          });
+
+          if (imageUrls.length > 0) {
+            // If we found an image, break out of the loop
+            break;
+          }
+        }
+
+        if (imageUrls.length === 0) {
+          throw new Error('Image not found after 5 minutes');
+        }
 
         await sendImages(imageUrls, session);
       } catch (error) {
-        logger.error('Error occurred while generating image:', error);
+        console.error('Error occurred while generating image:', error);
       } finally {
         if (browser) {
           await browser.close();
@@ -115,7 +131,7 @@ async function sendImages(imageUrls: string[], session: Session): Promise<void> 
         await session.send(`${h.at(session.userId)}${h.image(buffer, 'image/png')}`);
       }
     } catch (error) {
-      logger.error('Error occurred while downloading or sending image:', error);
+      console.error('Error occurred while downloading or sending image:', error);
     }
   });
 
@@ -380,14 +396,14 @@ class BingImageCreator {
     const url = `${this.apiurl}${telemetryData}&q=${encodeURIComponent(prompt)}${messageId ? `&iframeid=${messageId}` : ''}`;
 
     if (this.debug) {
-      logger.debug(`The url of the request for image creation: ${url}`);
+      console.debug(`The url of the request for image creation: ${url}`);
     }
 
     const response = await fetch(url, this.fetchOptions);
     const { status } = response;
     if (this.debug) {
-      logger.debug('The response of the request for image creation:');
-      logger.debug(response);
+      console.debug('The response of the request for image creation:');
+      console.debug(response);
     }
 
     if (status !== 200) {
@@ -425,7 +441,7 @@ class BingImageCreator {
 
     while (polling) {
       if (this.debug) {
-        logger.debug(`polling the image request: ${pollingUrl}`);
+        console.debug(`polling the image request: ${pollingUrl}`);
       }
 
       // eslint-disable-next-line no-await-in-loop
@@ -459,8 +475,8 @@ class BingImageCreator {
     const { pollingUrl } = await this.genImagePage(prompt, messageId);
     const resultHtml = await this.pollingImgRequest(pollingUrl, onProgress);
     if (this.debug) {
-      logger.debug('The result of the request for image creation:');
-      logger.debug(resultHtml);
+      console.debug('The result of the request for image creation:');
+      console.debug(resultHtml);
     }
 
     const regex = /(?<=src=")[^"]+(?=")/g;

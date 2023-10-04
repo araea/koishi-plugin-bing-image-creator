@@ -21,6 +21,7 @@
 
 ## 🎮 使用
 
+- 确保你能够正常使用 [Image Creator from Microsoft Bing](https://www.bing.com/create)。
 - 填写必选配置项。
 - 建议为指令添加指令别名。
 
