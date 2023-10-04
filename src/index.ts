@@ -42,12 +42,12 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.object({
-  proxy: Schema.string().default('http://127.0.0.1:7890').description(`一个代理字符串，如 "http://[ip]:[port]"`),
-  userToken: Schema.string().default('').description('来自 bing.com 的 "_U" cookie值'),
-  cookies: Schema.string().default('').description('(可选) 如果上述不起作用，提供所有的 cookies 作为一个字符串'),
-  host: Schema.string().default('').description('(可选) 必要的对于一些人在不同的国家，例如中国 (https://cn.bing.com)'),
-  userAgent: Schema.string().default('').description('(可选) 网络请求的用户代理'),
-  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志'),
+  proxy: Schema.string().default('http://127.0.0.1:7890').description(`一个代理字符串，如 "http://[ip]:[port]"。`),
+  userToken: Schema.string().default('').description('来自 bing.com 的 "_U" cookie值。'),
+  cookies: Schema.string().default('').description('(可选) 如果上述不起作用，提供所有的 cookies 作为一个字符串。'),
+  host: Schema.string().default('').description('(可选) 必要的对于一些人在不同的国家，例如中国 (https://cn.bing.com)。'),
+  userAgent: Schema.string().default('').description('(可选) 网络请求的用户代理。'),
+  debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志。'),
 })
 
 const executablePath = find();
@@ -80,7 +80,8 @@ export function apply(ctx: Context, config: Config) {
 
         browser = await puppeteer.launch({
           executablePath,
-          headless: false,
+          headless: "new",
+          // headless: false,
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
           protocolTimeout: 300000,
         });
