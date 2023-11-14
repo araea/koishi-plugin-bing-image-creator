@@ -96,7 +96,7 @@ export function apply(ctx: Context, config: Config) {
           await page.waitForTimeout(5000); // Wait for 5 seconds
 
           imageUrls = await page.evaluate(() => {
-            const images = Array.from(document.querySelectorAll('img.mimg'));
+            const images = Array.from(document.querySelectorAll('img.gir_mmimg, img.mimg'));
             return images.map(img => img.getAttribute('src'));
           });
 
