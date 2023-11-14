@@ -80,8 +80,8 @@ export function apply(ctx: Context, config: Config) {
 
         browser = await puppeteer.launch({
           executablePath,
-          headless: "new",
-          // headless: false,
+          // headless: "new",
+          headless: false,
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
           protocolTimeout: 300000,
         });
