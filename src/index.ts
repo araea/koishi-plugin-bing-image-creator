@@ -104,6 +104,16 @@ export function apply(ctx: Context, config: Config) {
             // If we found an image, break out of the loop
             break;
           }
+
+          const errorImage = await page.evaluate(() => {
+            const errorImg = document.querySelector('img.gil_err_img.blocked_bd.rms_img');
+            return errorImg ? errorImg.getAttribute('src') : null;
+          });
+
+          if (errorImage) {
+            await session.send(`${h.at(session.userId)} ~\n我们无法为此提示创建映像。请尝试其他提示。`);
+            return;
+          }
         }
 
         if (imageUrls.length === 0) {
