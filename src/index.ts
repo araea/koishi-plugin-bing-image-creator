@@ -60,7 +60,7 @@ export function apply(ctx: Context, config: Config) {
       await session.execute(`bingImageCreator -h`);
     });
 
-  ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
+    ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
     .action(async ({ session }, prompt) => {
       if (!prompt) {
         return '请提供一个 prompt 参数！';
@@ -90,6 +90,7 @@ export function apply(ctx: Context, config: Config) {
         await page.goto(src);
 
         let imageUrls = [];
+        let errorImage = false;
         // Try to find the image every 5 seconds for up to 5 minutes
         for (let attempt = 0; attempt < 60; attempt++) {
           await page.reload(); // Refresh the page
@@ -105,7 +106,7 @@ export function apply(ctx: Context, config: Config) {
             break;
           }
 
-          const errorImage = await page.evaluate(() => {
+          errorImage = await page.evaluate(() => {
             const errorImg = document.querySelector('img.gil_err_img.blocked_bd.rms_img');
             return errorImg ? errorImg.getAttribute('src') : null;
           });
@@ -114,9 +115,19 @@ export function apply(ctx: Context, config: Config) {
             await session.send(`${h.at(session.userId)} ~\n我们无法为此提示创建映像。请尝试其他提示。`);
             return;
           }
+
+          const errorMessage = await page.evaluate(() => {
+            const errorDiv = document.querySelector('.gil_err_tc');
+            return errorDiv ? errorDiv.textContent.trim() : null;
+          });
+
+          if (errorMessage && errorMessage.includes('尝试其他提示')) {
+            await session.send(`${h.at(session.userId)} ~\n${errorMessage}`);
+            return;
+          }
         }
 
-        if (imageUrls.length === 0) {
+        if (imageUrls.length === 0 && !errorImage) {
           throw new Error('Image not found after 5 minutes');
         }
 
