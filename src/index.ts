@@ -32,6 +32,7 @@ export const usage = `## 🎮 使用
 
 - \`bingImageCreator\`：基础命令，用于显示帮助信息。
 - \`bingImageCreator.draw <prompt:text>\`：生成 Bing 图片。需要提供一个 \`prompt\` 参数。`
+
 export interface Config {
   proxy: string;
   userToken: string;
@@ -39,28 +40,31 @@ export interface Config {
   host?: string;
   userAgent?: string;
   debug?: boolean;
+  headless?: string;
 }
 
 export const Config: Schema<Config> = Schema.object({
+  headless: Schema.union(['true', 'false', 'new']).default('new').description('是否以无头模式运行浏览器。'),
   proxy: Schema.string().default('http://127.0.0.1:7890').description(`一个代理字符串，如 "http://[ip]:[port]"。`),
   userToken: Schema.string().default('').description('来自 bing.com 的 "_U" cookie值。'),
   cookies: Schema.string().default('').description('(可选) 如果上述不起作用，提供所有的 cookies 作为一个字符串。'),
   host: Schema.string().default('').description('(可选) 必要的对于一些人在不同的国家，例如中国 (https://cn.bing.com)。'),
   userAgent: Schema.string().default('').description('(可选) 网络请求的用户代理。'),
   debug: Schema.boolean().default(false).description('(可选) 设置为true以启用 `console.debug()` 日志。'),
-})
+}) as any
+
 
 const executablePath = find();
 
 export function apply(ctx: Context, config: Config) {
-  const { debug } = config;
+  const { debug, headless } = config;
 
   ctx.command('bingImageCreator', '查看bingImageCreator指令帮助')
     .action(async ({ session }) => {
       await session.execute(`bingImageCreator -h`);
     });
 
-    ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
+  ctx.command('bingImageCreator.draw <prompt:text>', 'BingAI绘画')
     .action(async ({ session }, prompt) => {
       if (!prompt) {
         return '请提供一个 prompt 参数！';
@@ -80,7 +84,7 @@ export function apply(ctx: Context, config: Config) {
 
         browser = await puppeteer.launch({
           executablePath,
-          headless: "new",
+          headless: headless === 'true' ? true : headless === 'false' ? false : 'new',
           // headless: false,
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
           protocolTimeout: 300000,
